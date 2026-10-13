@@ -46,6 +46,16 @@ class Lead(Base):
         Index("ix_leads_follow_up_at", "follow_up_at"),
     )
 
+    @property
+    def last_note(self) -> str | None:
+        """Text of the most recent discussion (discussions are sorted newest first)."""
+        return self.discussions[0].note if self.discussions else None
+
+    @property
+    def last_note_at(self) -> datetime | None:
+        """When the most recent discussion was written."""
+        return self.discussions[0].created_at if self.discussions else None
+
 
 class Discussion(Base):
     __tablename__ = "discussions"
