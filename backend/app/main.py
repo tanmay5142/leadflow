@@ -1,7 +1,11 @@
 from fastapi import FastAPI
 
-app = FastAPI(title="LeadFlow API")
+from . import models
+from .database import Base, engine
 
+Base.metadata.create_all(bind=engine)
+
+app = FastAPI(title="LeadFlow API")
 
 @app.get("/health")
 def health():
