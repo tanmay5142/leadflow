@@ -57,3 +57,14 @@ export function addDiscussion(
     body: JSON.stringify(payload),
   });
 }
+
+export function addLead(payload: {
+  name: string;
+  company: string | null;
+  phone: string | null;
+}) {
+  return request<Lead>("/leads", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}

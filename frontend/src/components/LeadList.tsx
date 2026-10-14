@@ -5,6 +5,8 @@ import { fetchLeads } from "@/lib/api";
 import { isTodayFollowUp } from "@/lib/followup";
 import type { Lead, LeadDetail, Status } from "@/lib/types";
 import FilterBar from "./FilterBar";
+import AddLeadDialog from "./AddLeadDialog";
+import Header from "./Header";
 import LeadCard from "./LeadCard";
 import LeadDialog from "./LeadDialog";
 import SearchBox from "./SearchBox";
@@ -19,6 +21,8 @@ export default function LeadList() {
   const [reloadKey, setReloadKey] = useState(0);
   const [openId, setOpenId] = useState<number | null>(null);
   const changedRef = useRef(false); // did anything change inside the dialog?
+  const [showAdd, setShowAdd] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   // Wait 300ms after the user stops typing before searching
   useEffect(() => {
@@ -61,6 +65,23 @@ export default function LeadList() {
       setReloadKey((k) => k + 1);
     }
   }, []);
+
+    // A new lead was saved: close the dialog, clear filters, reload the list
+  const handleAdded = useCallback((lead: Lead) => {
+    setShowAdd(false);
+    setStatus(null);
+    setSearchText("");
+    setSearch("");
+    setReloadKey((k) => k + 1);
+    setNotice(`${lead.name} was added.`);
+  }, []);
+
+  // Hide the green message after 3 seconds
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(null), 3000);
+    return () => clearTimeout(timer);
+  }, [notice]);
 
   // Split into "today's follow-ups" and everything else
   const { pinned, others } = useMemo(() => {
@@ -144,13 +165,27 @@ export default function LeadList() {
     );
   }
 
-  return (
-    <div className="space-y-6">
-      <div className="space-y-3">
-        <FilterBar value={status} onChange={setStatus} />
-        <SearchBox value={searchText} onChange={setSearchText} />
-      </div>
-      {content}
+    return (
+    <>
+      <Header onAdd={() => setShowAdd(true)} />
+
+      <main className="mx-auto max-w-4xl space-y-6 px-4 py-8">
+        {notice && (
+          <p
+            role="status"
+            className="rounded-md bg-green-100 px-4 py-2 text-sm text-green-800"
+          >
+            ✅ {notice}
+          </p>
+        )}
+
+        <div className="space-y-3">
+          <FilterBar value={status} onChange={setStatus} />
+          <SearchBox value={searchText} onChange={setSearchText} />
+        </div>
+
+        {content}
+      </main>
 
       {openId !== null && (
         <LeadDialog
@@ -160,6 +195,10 @@ export default function LeadList() {
           onChanged={handleChanged}
         />
       )}
-    </div>
+
+      {showAdd && (
+        <AddLeadDialog onClose={() => setShowAdd(false)} onAdded={handleAdded} />
+      )}
+    </>
   );
 }
