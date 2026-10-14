@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fetchLeads } from "@/lib/api";
 import { isTodayFollowUp } from "@/lib/followup";
-import type { Lead, Status } from "@/lib/types";
+import type { Lead, LeadDetail, Status } from "@/lib/types";
 import FilterBar from "./FilterBar";
 import LeadCard from "./LeadCard";
+import LeadDialog from "./LeadDialog";
 import SearchBox from "./SearchBox";
 
 export default function LeadList() {
@@ -16,6 +17,8 @@ export default function LeadList() {
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [openId, setOpenId] = useState<number | null>(null);
+  const changedRef = useRef(false); // did anything change inside the dialog?
 
   // Wait 300ms after the user stops typing before searching
   useEffect(() => {
@@ -23,7 +26,7 @@ export default function LeadList() {
     return () => clearTimeout(timer);
   }, [searchText]);
 
-  // Load leads whenever the filter, the search, or the retry counter changes
+  // Load leads whenever the filter, the search, or the reload counter changes
   useEffect(() => {
     let cancelled = false;
 
@@ -39,11 +42,25 @@ export default function LeadList() {
         setError(e instanceof Error ? e.message : "Something went wrong");
       });
 
-    // If a newer request starts, ignore the result of this older one
     return () => {
       cancelled = true;
     };
   }, [status, search, reloadKey]);
+
+  // The dialog saved something: update that lead in the list right away
+  const handleChanged = useCallback((updated: LeadDetail) => {
+    changedRef.current = true;
+    setLeads((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
+  }, []);
+
+  // Dialog closed: if something changed, reload so the filter and order are correct
+  const handleClose = useCallback(() => {
+    setOpenId(null);
+    if (changedRef.current) {
+      changedRef.current = false;
+      setReloadKey((k) => k + 1);
+    }
+  }, []);
 
   // Split into "today's follow-ups" and everything else
   const { pinned, others } = useMemo(() => {
@@ -96,7 +113,12 @@ export default function LeadList() {
             </h2>
             <div className="space-y-3">
               {pinned.map((lead) => (
-                <LeadCard key={lead.id} lead={lead} pinned />
+                <LeadCard
+                  key={lead.id}
+                  lead={lead}
+                  pinned
+                  onOpen={() => setOpenId(lead.id)}
+                />
               ))}
             </div>
           </section>
@@ -109,7 +131,11 @@ export default function LeadList() {
             </h2>
             <div className="space-y-3">
               {others.map((lead) => (
-                <LeadCard key={lead.id} lead={lead} />
+                <LeadCard
+                  key={lead.id}
+                  lead={lead}
+                  onOpen={() => setOpenId(lead.id)}
+                />
               ))}
             </div>
           </section>
@@ -125,6 +151,15 @@ export default function LeadList() {
         <SearchBox value={searchText} onChange={setSearchText} />
       </div>
       {content}
+
+      {openId !== null && (
+        <LeadDialog
+          key={openId}
+          leadId={openId}
+          onClose={handleClose}
+          onChanged={handleChanged}
+        />
+      )}
     </div>
   );
 }

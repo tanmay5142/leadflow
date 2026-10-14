@@ -1,3 +1,4 @@
+import type { KeyboardEvent } from "react";
 import type { Lead } from "@/lib/types";
 import { timeAgo } from "@/lib/time";
 import { formatFollowUp, isClosed, isOverdue } from "@/lib/followup";
@@ -5,9 +6,11 @@ import StatusBadge from "./StatusBadge";
 
 export default function LeadCard({
   lead,
+  onOpen,
   pinned = false,
 }: {
   lead: Lead;
+  onOpen: () => void;
   pinned?: boolean;
 }) {
   const closed = isClosed(lead);
@@ -17,9 +20,20 @@ export default function LeadCard({
   if (overdue) style = "border-red-300 bg-red-50";
   else if (pinned) style = "border-blue-200 bg-blue-50";
 
+  function handleKey(e: KeyboardEvent) {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onOpen();
+    }
+  }
+
   return (
     <div
-      className={`rounded-lg border px-5 py-4 shadow-sm ${style} ${
+      role="button"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={handleKey}
+      className={`cursor-pointer rounded-lg border px-5 py-4 shadow-sm transition hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-300 ${style} ${
         closed ? "opacity-60" : ""
       }`}
     >
