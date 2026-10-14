@@ -1,14 +1,25 @@
 import type { Lead } from "@/lib/types";
 import { timeAgo } from "@/lib/time";
+import { formatFollowUp, isClosed, isOverdue } from "@/lib/followup";
 import StatusBadge from "./StatusBadge";
 
-export default function LeadCard({ lead }: { lead: Lead }) {
-  // Closed leads (Won / Lost) are shown faded
-  const closed = lead.status === "Won" || lead.status === "Lost";
+export default function LeadCard({
+  lead,
+  pinned = false,
+}: {
+  lead: Lead;
+  pinned?: boolean;
+}) {
+  const closed = isClosed(lead);
+  const overdue = isOverdue(lead);
+
+  let style = "border-slate-200 bg-white";
+  if (overdue) style = "border-red-300 bg-red-50";
+  else if (pinned) style = "border-blue-200 bg-blue-50";
 
   return (
     <div
-      className={`rounded-lg border border-slate-200 bg-white px-5 py-4 shadow-sm ${
+      className={`rounded-lg border px-5 py-4 shadow-sm ${style} ${
         closed ? "opacity-60" : ""
       }`}
     >
@@ -31,6 +42,16 @@ export default function LeadCard({ lead }: { lead: Lead }) {
             {timeAgo(lead.last_note_at)}
           </span>
         </p>
+      )}
+
+      {lead.follow_up_at && !closed && (
+        <span
+          className={`mt-3 inline-block rounded px-2 py-1 text-xs font-semibold ${
+            overdue ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
+          }`}
+        >
+          {overdue ? "⚠️" : "🔔"} {formatFollowUp(lead.follow_up_at, overdue)}
+        </span>
       )}
     </div>
   );
