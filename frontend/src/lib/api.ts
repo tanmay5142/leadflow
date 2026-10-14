@@ -1,4 +1,4 @@
-import type { Lead, Status } from "./types";
+import type { Lead, LeadDetail, Status } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -21,7 +21,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
       const body = await res.json();
       if (typeof body.detail === "string") message = body.detail;
     } catch {
-      
+      // the error body was not JSON, keep the default message
     }
     throw new ApiError(message);
   }
@@ -35,4 +35,25 @@ export function fetchLeads(params: { status?: Status; search?: string } = {}) {
   if (params.search) query.set("search", params.search);
   const qs = query.toString();
   return request<Lead[]>(`/leads${qs ? `?${qs}` : ""}`);
+}
+
+export function fetchLead(id: number) {
+  return request<LeadDetail>(`/leads/${id}`);
+}
+
+export function updateLeadStatus(id: number, status: Status) {
+  return request<LeadDetail>(`/leads/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+}
+
+export function addDiscussion(
+  id: number,
+  payload: { note: string; follow_up_at: string | null }
+) {
+  return request<LeadDetail>(`/leads/${id}/discussions`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
